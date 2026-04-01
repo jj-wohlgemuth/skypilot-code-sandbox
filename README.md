@@ -1,40 +1,166 @@
-# SkyPilot Code Sandbox
+# joschkas-clowd
 
-A self-hosted, secure code execution sandbox for LLM agents deployed on your cloud infrastructure using [SkyPilot](https://skypilot.readthedocs.io/). Built on [llm-sandbox](https://vndee.github.io/llm-sandbox/languages/) for multi-language code execution.
+This repo lets you launch a cloud VM on AWS that runs as a Claude Code workspace. You SSH into it, run Claude Code, and it can autonomously write code, clone repos, create branches and PRs — all from the VM, independent of your local machine.
 
-## Key Features
+The VM also runs a code execution API (MCP server) so your local Claude Desktop or VS Code can send code to be executed remotely in a Docker sandbox.
 
-- **Team Collaboration**: Mount S3 buckets in read-only mode for shared data access across team members
-- **Secure & Scalable**: Token-based auth, Docker sandboxing, auto-scaling
-- **Multi-language**: Python, JavaScript, Java, C++, etc with dynamic package installation
-- **Universal MCP Integration**: Works with [Claude Desktop](https://claude.ai/download), [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), and other [MCP clients](https://modelcontextprotocol.io/clients)
-- **Cloud Native**: Deploy on any cloud (AWS, GCP, Azure, etc.) with built-in load balancing and cost optimization
+Shared memory across multiple VM instances is backed by Cloudflare R2, so Claude's notes and context persist even after the VM shuts down.
 
-## Requirements
+## What the VM provides
 
-- [SkyPilot](https://skypilot.readthedocs.io/) for deployment
-- Valid cloud credentials
-- Docker for local development
+- **Claude Code** — runs interactively on the VM or via browser UI tunneled over SSH
+- **GitHub access** — your `~/.ssh/id_rsa` is synced to the VM; clone, push, and open PRs with `gh`
+- **Shared persistent memory** — `~/.claude/` is mounted from R2, shared across all instances
+- **Environment variables** — your `.env` is synced and sourced automatically in every shell
+- **Code execution API** — FastAPI server on port 8080, usable as an MCP tool from local Claude clients
+- **Shared data bucket** — R2 bucket mounted at `/bucket_data`
+- **Tools**: `uv`, `gh`, `rclone`, `claude`
 
-## Quick Start
+## Prerequisites
 
-### 1. Deploy the Service
-```bash
-export AUTH_TOKEN=<YOUR_AUTH_TOKEN>
-sky serve up -n code-executor src/code-execution-service.sky.yaml --env AUTH_TOKEN --secret AUTH_TOKEN
+- [SkyPilot](https://skypilot.readthedocs.io/) installed and configured (`pip install skypilot`)
+- AWS credentials configured (`aws configure` or SSO)
+- Cloudflare R2 credentials in `~/.cloudflare/r2.credentials` (profile name: `r2`)
+- Cloudflare account ID in `~/.cloudflare/accountid`
+- SkyPilot R2 check passing: `sky check`
+
+## Setup
+
+### 1. Configure your `.env`
+
+Edit `.env` at the repo root with your secrets:
+
+```env
+R2_ACCOUNT_ID="..."
+R2_ACCESS_KEY_ID="..."
+R2_SECRET_ACCESS_KEY="..."
+R2_ENDPOINT="https://<account_id>.r2.cloudflarestorage.com"
+HF_API_KEY="..."
 ```
 
-### 2. Get the API Endpoint
+This file is synced to `~/.env` on the VM and sourced automatically.
+
+### 2. Set your auth token
+
+The code execution API requires a token. Set it in your shell:
+
 ```bash
-sky serve status code-executor-service --endpoint
+export AUTH_TOKEN=<a-random-string-you-choose>
 ```
 
-### 3. Configure Your MCP Client
+### 3. Launch the VM
 
-Using Claude Desktop as an example:
+```bash
+sky launch -c joschkas-clowd src/code-execution-service.sky.yaml --env AUTH_TOKEN=$AUTH_TOKEN
+```
 
-- macOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+SkyPilot will provision an x86 AWS instance in `us-east-1`, sync your files, and start the API server.
+
+Check the VM IP:
+
+```bash
+sky status joschkas-clowd
+```
+
+## Using Claude Code on the VM
+
+### Terminal (interactive) 1
+
+```bash
+sky ssh joschkas-clowd
+```
+
+
+### Using tmux (recommended)
+
+Use tmux so your session survives SSH disconnects and you can run multiple panes (e.g. Claude Code + logs side by side).
+
+```bash
+sky ssh joschkas-clowd
+tmux new -s claude        # start a named session
+claude                    # run Claude Code inside it
+```
+
+Detach at any time with `Ctrl+B D` — Claude keeps running. Reattach later:
+
+```bash
+sky ssh joschkas-clowd
+tmux attach -t claude
+```
+
+Useful tmux shortcuts:
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+B D` | Detach (leave session running) |
+| `Ctrl+B C` | New window |
+| `Ctrl+B %` | Split pane vertically |
+| `Ctrl+B "` | Split pane horizontally |
+| `Ctrl+B Arrow` | Switch pane |
+| `Ctrl+B [` | Scroll mode (use arrow keys, `Q` to exit) |
+
+List all sessions:
+
+```bash
+tmux ls
+```
+
+### Terminal (interactive) 2
+
+On first login, authenticate the `gh` CLI:
+
+```bash
+gh auth login
+# Choose: GitHub.com → SSH → use existing key ~/.ssh/id_rsa
+```
+
+Then start Claude Code:
+
+```bash
+claude
+```
+
+Paste this first prompt to bootstrap Claude's awareness of the environment:
+
+```text
+Read ~/sky_workdir/CLAUDE_VM_README.md to orient yourself.
+
+You have access to private GitHub repos via SSH (~/.ssh/id_rsa).
+Environment variables are in ~/.env and already exported in this shell.
+Your memory persists in ~/.claude/ which is shared across all Claude instances via R2.
+
+Before starting any work:
+1. Run `ssh -T git@github.com` to confirm GitHub access
+2. Run `echo $R2_ACCOUNT_ID` to confirm env vars are loaded
+3. Run `gh auth status` to check if gh CLI is authenticated — if not, run `gh auth login`
+
+Then tell me what you'd like to work on.
+```
+
+### Browser UI (via SSH tunnel)
+
+In one terminal, open the tunnel:
+
+```bash
+sky ssh joschkas-clowd -- -L 8501:localhost:8501 -N
+```
+
+In another, start the UI on the VM:
+
+```bash
+sky ssh joschkas-clowd
+claude --ui --port 8501
+```
+
+Open [http://localhost:8501](http://localhost:8501). No ports are exposed publicly — traffic goes over SSH.
+
+## Using the Code Execution API (MCP)
+
+The VM runs a sandboxed code execution service on port 8080. Your local Claude Desktop or VS Code can use it as an MCP tool.
+
+Get the VM's public IP from `sky status joschkas-clowd`, then configure your MCP client:
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -47,7 +173,7 @@ Using Claude Desktop as an example:
         "mcp-server"
       ],
       "env": {
-        "API_BASE_URL": "<YOUR_ENDPOINT>",
+        "API_BASE_URL": "http://<VM_IP>:8080",
         "AUTH_TOKEN": "<YOUR_AUTH_TOKEN>"
       }
     }
@@ -55,21 +181,22 @@ Using Claude Desktop as an example:
 }
 ```
 
-https://github.com/user-attachments/assets/474e2c10-e0d4-47a7-9985-6bbdde6c526d
+**VS Code** (`.vscode/mcp.json`): same config, rename `mcpServers` to `servers`.
 
-**VS Code**: Add the same configuration to `.vscode/mcp.json` (rename `mcpServers` to `servers`).
+Test the endpoint:
 
-https://github.com/user-attachments/assets/ea4626e0-644a-4496-bb8a-161c668cad24
+```bash
+curl http://<VM_IP>:8080/health -H "Authorization: Bearer $AUTH_TOKEN"
+```
 
-## Team Deployment Benefits
+## Managing the VM
 
-The **S3 read-only mount** feature enables seamless team collaboration:
-- **Shared datasets**: All team members access the same data without duplication
-- **Security**: Read-only access prevents accidental data modification
-- **Cost efficient**: Single data storage, multiple execution environments
-
-Great for collaborative research projects.
-
+```bash
+sky status                        # list all clusters
+sky stop joschkas-clowd           # stop (preserves disk, saves cost)
+sky start joschkas-clowd          # restart a stopped cluster
+sky down joschkas-clowd           # terminate permanently
+```
 
 ## Local Development
 
@@ -78,8 +205,4 @@ pip install -e .
 python -m uvicorn src.api:app --host 0.0.0.0 --workers 4 --port 8080
 ```
 
-Update MCP config to use `"API_BASE_URL": "http://localhost:8080"` for local testing.
-
-
-
-
+Set `"API_BASE_URL": "http://localhost:8080"` in your MCP config for local testing.
