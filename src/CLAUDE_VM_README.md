@@ -47,6 +47,14 @@ Your `~/.claude/` directory is mounted from the R2 bucket `joschkas-clowd/claude
 - `rclone` — R2/S3 file sync
 - `claude` — Claude Code CLI (`~/.claude/local/claude`)
 
+## Working Directory
+
+Always store files on the VM — cloned repositories, downloaded assets, processed outputs, temporary files — in `~/sky_workdir/`. This is the default working directory for the Sky Claude instance and is the expected location for all work artifacts.
+
+```bash
+cd ~/sky_workdir
+```
+
 ## Shared Data Bucket
 
 The R2 bucket `joschkas-clowd` is mounted read-write at `/bucket_data`.
