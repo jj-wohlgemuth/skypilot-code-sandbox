@@ -15,7 +15,7 @@ resources:
   region: us-east-1
   # If you want to use whisper and parakeet a lot use a GPU machine image_id: ami-0f4d5ef8f66860703, accelerators: A10G:1, instance_type: g5.xlarge
   any_of:
-    - instance_type: c6a.4xlarge
+    - instance_type: c6a.16xlarge
     # c6i.4xlarge
     # - instance_type: m6in.4xlarge
     # - instance_type: c6in.8xlarge
@@ -27,6 +27,7 @@ file_mounts:
     source: r2://joschkas-clowd/ # or GCS, or Azure Blob Storage, or R2, etc.
   ~/.ssh/id_rsa: ~/.ssh/id_rsa
   ~/.ssh/id_rsa.pub: ~/.ssh/id_rsa.pub
+  ~/.aws/config: ~/.aws/config
   ~/.env: .env
 
 workdir: src
@@ -54,9 +55,20 @@ setup: |
   # Install Claude Code
   curl -fsSL https://claude.ai/install.sh | bash || true
 
+  # Install AWS CLI v2 (v1 doesn't support SSO)
+  if ! aws --version 2>&1 | grep -q 'aws-cli/2'; then
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    sudo /tmp/aws/install --update
+    rm -rf /tmp/awscliv2.zip /tmp/aws
+  fi
+
+  # Install build tools (gcc required for packages like pesq)
+  sudo apt-get update && sudo apt-get install -y gcc build-essential
+
   # Install ffmpeg
   if ! command -v ffmpeg >/dev/null 2>&1; then
-    sudo apt-get update && sudo apt-get install -y ffmpeg
+    sudo apt-get install -y ffmpeg
   fi
 
   # Install rclone for R2-backed Claude memory

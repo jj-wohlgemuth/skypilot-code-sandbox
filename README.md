@@ -51,7 +51,7 @@ export AUTH_TOKEN=<a-random-string-you-choose>
 ### 3. Launch the VM
 
 ```bash
-sky launch -c joschkas-clowd src/code-execution-service.sky.yaml --env AUTH_TOKEN=$AUTH_TOKEN
+sky launch -c vf2-benchmark src/run.yaml --env AUTH_TOKEN=$AUTH_TOKEN
 ```
 
 SkyPilot will provision an x86 AWS instance in `us-east-1`, sync your files, and start the API server.
@@ -130,9 +130,10 @@ Environment variables are in ~/.env and already exported in this shell.
 Your memory persists in ~/.claude/ which is shared across all Claude instances via R2.
 
 Before starting any work:
-1. Run `ssh -T git@github.com` to confirm GitHub access
-2. Run `echo $R2_ACCOUNT_ID` to confirm env vars are loaded
-3. Run `gh auth status` to check if gh CLI is authenticated — if not, run `gh auth login`
+1. Run `aws sso login --profile=default` to authenticate against AWS via SSO
+2. Run `ssh -T git@github.com` to confirm GitHub access
+3. Run `echo $R2_ACCOUNT_ID` to confirm env vars are loaded
+4. Run `gh auth status` to check if gh CLI is authenticated — if not, run `gh auth login`
 
 Then tell me what you'd like to work on.
 ```
