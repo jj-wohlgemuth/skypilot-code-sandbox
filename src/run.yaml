@@ -2,6 +2,7 @@ name: joschkas_clowd
 
 envs:
   AUTH_TOKEN:
+  WANDB_API_KEY:
 
 service:
   readiness_probe:
