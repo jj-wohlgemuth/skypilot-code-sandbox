@@ -51,7 +51,7 @@ export AUTH_TOKEN=<a-random-string-you-choose>
 ### 3. Launch the VM
 
 ```bash
-sky launch -c vf2-benchmark src/run.yaml --env AUTH_TOKEN=$AUTH_TOKEN
+sky launch -c joschkas-clowd src/run.yaml --env AUTH_TOKEN=$AUTH_TOKEN --env WANDB_API_KEY=$WANDB_API_KEY
 ```
 
 SkyPilot will provision an x86 AWS instance in `us-east-1`, sync your files, and start the API server.

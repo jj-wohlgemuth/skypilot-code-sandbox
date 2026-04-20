@@ -2,7 +2,7 @@ name: joschkas_clowd
 
 envs:
   AUTH_TOKEN:
-  WANDB_API_KEY:
+  WANDB_API_KEY: ""
 
 service:
   readiness_probe:
@@ -16,7 +16,7 @@ resources:
   region: us-east-1
   # If you want to use whisper and parakeet a lot use a GPU machine image_id: ami-0f4d5ef8f66860703, accelerators: A10G:1, instance_type: g5.xlarge
   any_of:
-    - instance_type: c6a.16xlarge
+    - instance_type: c6a.8xlarge
     # c6i.4xlarge
     # - instance_type: m6in.4xlarge
     # - instance_type: c6in.8xlarge
