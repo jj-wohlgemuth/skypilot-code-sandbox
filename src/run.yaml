@@ -4,7 +4,7 @@ resources:
   cloud: aws
   region: us-east-1
   # Default profile: data engineering (many CPUs, high network throughput).
-  # For a cheap Claude box or a GPU machine, launch via ./launch.sh — its
+  # For a cheap Claude box or a GPU machine (a10/l4), launch via ./launch.sh — its
   # --instance-type/--gpus/--image-id flags override this any_of list.
   any_of:
     - instance_type: m5n.4xlarge

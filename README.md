@@ -45,7 +45,8 @@ Pick a hardware profile at launch time:
 ```bash
 CLUSTER="joschkas-" ./launch.sh claude   # Mac-class box for Claude Code (~M4 Pro)   (c8i.4xlarge, 16 vCPU/32 GB, ~$0.75/h)
 CLUSTER="joschkas-" ./launch.sh data     # many CPUs + high network for data eng     (any_of list in run.yaml)
-CLUSTER="joschkas-" ./launch.sh gpu      # A10G GPU for whisper/parakeet etc.        (g5.xlarge, ~$1.01/h)
+CLUSTER="joschkas-" ./launch.sh a10      # A10G GPU for whisper/parakeet etc.        (g5.xlarge, ~$1.01/h)
+CLUSTER="joschkas-" ./launch.sh l4       # L4 GPU, 32 vCPU/128 GB, bigger GPU jobs   (g6.8xlarge, ~$2.01/h)
 ```
 
 Extra arguments are passed through to `sky launch` (e.g. `-y`). The cluster name defaults to `joschkas-clowd`; override with `CLUSTER=<name> ./launch.sh ...`. To switch an existing cluster to a different profile, `sky down joschkas-clowd` first — all persistent state lives in R2, not on the VM.
