@@ -3,6 +3,16 @@ name: joschkas_clowd
 resources:
   cloud: aws
   region: us-east-1
+  # AWS billing tags for Cost Explorer attribution (ML-868). Top-level so they
+  # apply to every any_of candidate and survive launch.sh's --instance-type /
+  # --gpus overrides. Applied on FIRST launch only — a running cluster is never
+  # retroactively tagged, so `sky down` before the tags matter.
+  labels:
+    Application: DATA_ENGINEERING
+    Environment: Research
+    Layer: Compute
+    Managed-by: SkyPilot
+    Team: MLEngineering
   # Default profile: data engineering (many CPUs, high network throughput).
   # For a cheap Claude box or a GPU machine (a10/l4), launch via ./launch.sh — its
   # --instance-type/--gpus/--image-id flags override this any_of list.
