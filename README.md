@@ -44,9 +44,10 @@ Pick a hardware profile at launch time:
 
 ```bash
 CLUSTER="joschkas-" ./launch.sh claude   # Mac-class box for Claude Code (~M4 Pro)   (c8i.4xlarge, 16 vCPU/32 GB, ~$0.75/h)
-CLUSTER="joschkas-" ./launch.sh data     # many CPUs + high network for data eng     (any_of list in run.yaml)
+CLUSTER="joschkas-" ./launch.sh data     # many CPUs + high network for data eng     (ordered list in run.yaml)
 CLUSTER="joschkas-" ./launch.sh a10      # A10G GPU for whisper/parakeet etc.        (g5.xlarge, ~$1.01/h)
 CLUSTER="joschkas-" ./launch.sh l4       # L4 GPU, 32 vCPU/128 GB, bigger GPU jobs   (g6.8xlarge, ~$2.01/h)
+CLUSTER="joschkas-" ./launch.sh l40s     # L40S 48 GB VRAM, 8 vCPU/64 GB              (g6e.2xlarge, ~$2.24/h)
 ```
 
 AWS regions are restricted to an allowlist — `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1`, `eu-central-1`, `ap-northeast-2` — defined as the `ordered:` preference list in `src/run.yaml`. It is tried top to bottom, so launches land in `us-east-1` unless the instance type is capacity-constrained there, and can never land outside the six. Passing `--infra` to `sky launch` overrides that list and re-opens every AWS region, so don't.
