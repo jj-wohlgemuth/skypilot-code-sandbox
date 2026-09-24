@@ -49,6 +49,8 @@ CLUSTER="joschkas-" ./launch.sh a10      # A10G GPU for whisper/parakeet etc.   
 CLUSTER="joschkas-" ./launch.sh l4       # L4 GPU, 32 vCPU/128 GB, bigger GPU jobs   (g6.8xlarge, ~$2.01/h)
 ```
 
+AWS regions are restricted to an allowlist — `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1`, `eu-central-1`, `ap-northeast-2` — defined as the `ordered:` preference list in `src/run.yaml`. It is tried top to bottom, so launches land in `us-east-1` unless the instance type is capacity-constrained there, and can never land outside the six. Passing `--infra` to `sky launch` overrides that list and re-opens every AWS region, so don't.
+
 Extra arguments are passed through to `sky launch` (e.g. `-y`). The cluster name defaults to `joschkas-clowd`; override with `CLUSTER=<name> ./launch.sh ...`. To switch an existing cluster to a different profile, `sky down joschkas-clowd` first — all persistent state lives in R2, not on the VM.
 
 Check the VM:

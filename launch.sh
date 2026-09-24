@@ -24,13 +24,14 @@ case "$PROFILE" in
   # Ubuntu-based with NVIDIA drivers; the once-suggested DLAMI
   # ami-0f4d5ef8f66860703 is Amazon Linux 2023, which breaks the apt-based
   # setup script in run.yaml (no claude, no ~/.claude, nothing).
-  # `--infra aws` overrides run.yaml's `region: us-east-1` pin so SkyPilot can
-  # fail over to another region when a GPU type is capacity-constrained there
-  # (g6.8xlarge regularly is). The optimizer still picks the cheapest region
-  # first, which is us-east-1. /bucket_data is R2, so it is region-agnostic;
-  # S3 reads from another region still work but cross-region egress is billed.
-  a10)    OVERRIDES=(--instance-type g5.xlarge --gpus A10G:1 --infra aws) ;;
-  l4)     OVERRIDES=(--instance-type g6.8xlarge --gpus L4:1 --infra aws) ;;
+  # No --infra here, on purpose: it would override the per-region entries in
+  # run.yaml's `ordered` list and re-open every AWS region. The allowlist there
+  # is what lets a GPU launch fail over when a type is capacity-constrained
+  # (g6.8xlarge regularly is in us-east-1). Cheapest allowed region wins, which
+  # is normally us-east-1; /bucket_data is R2 and region-agnostic, but S3 reads
+  # from another region are cross-region egress and are billed as such.
+  a10)    OVERRIDES=(--instance-type g5.xlarge --gpus A10G:1) ;;
+  l4)     OVERRIDES=(--instance-type g6.8xlarge --gpus L4:1) ;;
   *) echo "usage: $0 {claude|data|a10|l4} [extra sky launch args]" >&2; exit 1 ;;
 esac
 

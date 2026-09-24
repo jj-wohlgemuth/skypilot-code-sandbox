@@ -2,7 +2,6 @@ name: joschkas_clowd
 
 resources:
   cloud: aws
-  region: us-east-1
   # AWS billing tags for Cost Explorer attribution (ML-868). Top-level so they
   # apply to every any_of candidate and survive launch.sh's --instance-type /
   # --gpus overrides. Applied on FIRST launch only — a running cluster is never
@@ -13,16 +12,51 @@ resources:
     Layer: Compute
     Managed-by: SkyPilot
     Team: MLEngineering
-  # Default profile: data engineering (many CPUs, high network throughput).
-  # For a cheap Claude box or a GPU machine (a10/l4), launch via ./launch.sh — its
-  # --instance-type/--gpus/--image-id flags override this any_of list.
-  any_of:
-    - instance_type: m5n.4xlarge
-    - instance_type: c6i.4xlarge
-    - instance_type: m6in.4xlarge
-    # - instance_type: c6in.8xlarge
-    # - instance_type: m5n.8xlarge
-    - instance_type: m5zn.6xlarge
+  # REGION ALLOWLIST. SkyPilot has no global "allowed regions" config key (only
+  # allowed_clouds), so the allowlist is exactly the set of regions named below:
+  # nothing outside it can ever be provisioned. Because of that, launch.sh must
+  # NOT pass --infra — it overrides these entries and silently re-opens every
+  # AWS region.
+  #
+  # `ordered` (not any_of) means this is a preference list tried top to bottom,
+  # so us-east-1 stays the default and the rest are genuine fallbacks for when
+  # a type is capacity-constrained. any_of would instead pick the cheapest
+  # candidate, which on a price tie drifts into another region for no reason.
+  #
+  # Default profile: data engineering (many CPUs, high network throughput) —
+  # the cross product of allowed regions x those instance types, cheapest type
+  # first, since ordered/any_of entries are alternatives and cannot be given as
+  # two combinable lists. Combinations AWS does not offer are reported and
+  # skipped, not fatal. (Disabled data types: c6in.8xlarge, m5n.8xlarge.)
+  #
+  # For a cheap Claude box or a GPU machine (a10/l4), launch via ./launch.sh —
+  # its --instance-type/--gpus flags replace the type in every entry below and
+  # leave the regions intact, so both the allowlist and the order still hold.
+  ordered:
+    - {region: us-east-1, instance_type: c6i.4xlarge}
+    - {region: us-east-1, instance_type: m5n.4xlarge}
+    - {region: us-east-1, instance_type: m6in.4xlarge}
+    - {region: us-east-1, instance_type: m5zn.6xlarge}
+    - {region: us-east-2, instance_type: c6i.4xlarge}
+    - {region: us-east-2, instance_type: m5n.4xlarge}
+    - {region: us-east-2, instance_type: m6in.4xlarge}
+    - {region: us-east-2, instance_type: m5zn.6xlarge}
+    - {region: us-west-2, instance_type: c6i.4xlarge}
+    - {region: us-west-2, instance_type: m5n.4xlarge}
+    - {region: us-west-2, instance_type: m6in.4xlarge}
+    - {region: us-west-2, instance_type: m5zn.6xlarge}
+    - {region: eu-west-1, instance_type: c6i.4xlarge}
+    - {region: eu-west-1, instance_type: m5n.4xlarge}
+    - {region: eu-west-1, instance_type: m6in.4xlarge}
+    - {region: eu-west-1, instance_type: m5zn.6xlarge}
+    - {region: eu-central-1, instance_type: c6i.4xlarge}
+    - {region: eu-central-1, instance_type: m5n.4xlarge}
+    - {region: eu-central-1, instance_type: m6in.4xlarge}
+    - {region: eu-central-1, instance_type: m5zn.6xlarge}
+    - {region: ap-northeast-2, instance_type: c6i.4xlarge}
+    - {region: ap-northeast-2, instance_type: m5n.4xlarge}
+    - {region: ap-northeast-2, instance_type: m6in.4xlarge}
+    - {region: ap-northeast-2, instance_type: m5zn.6xlarge}
 
 file_mounts:
   /bucket_data:
